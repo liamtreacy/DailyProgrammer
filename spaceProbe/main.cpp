@@ -2,100 +2,204 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
+#include <algorithm>
 
 #include "assert.h"
 
 using namespace std;
 
-struct mapNumbers
-{
-    mapNumbers() : empty(1), gravityWells(1), asteroids(1)
-    {}
 
-    int empty;
-    int gravityWells;
-    int asteroids;
+/*
+    Grid is N x N
+
+    30% of spots are "A" asteroids
+    10% of spots are "G" gravity wells
+    60% of spots are "." empty space
+
+    Must be randomly populated
+
+    Probes cannot enter Asteroids
+    Spots around Gravity wells are un-unnavigable 'X'
+
+    . = empty space
+    S = start location
+    E = end location
+    G = gravity well
+    A = Asteroid
+    O = Path.
+*/
+
+enum SpotType
+{
+    Empty,
+    Asteroid,
+    GravityWell,
+    GravityWellAdjacent
+};
+
+string typeToStr(SpotType type)
+{
+    switch (type)
+    {
+    case Empty:
+        return ".";
+    case Asteroid:
+        return "A";
+    case GravityWell:
+        return "G";
+    case GravityWellAdjacent:
+        return "x";
+    }
+}
+
+class Spot
+{
+public:
+    Spot(SpotType _type) : type(_type)
+    {
+    }
+
+    string toString()
+    {
+        return typeToStr(type);
+    }
+
+    SpotType getType()
+    {
+        return type;
+    }
+
+    void setAsGWAdjacent()
+    {
+        if (type == Empty)
+        {
+            type = SpotType::GravityWellAdjacent;
+        }
+    }
+
+private:
+    SpotType type;
 };
 
 
-mapNumbers getNumbersToBeAppliedToMap(int n)
+class Grid
 {
-    // 10% of spots on map are "A" asteroids
-    // 30% are "G" gravity wells
-    // 60% are "." empty space
+public:
+    Grid(int n)
+    {
+        init(n);
+    }
 
-    mapNumbers t;
+    void drawMap()
+    {
+        for (vector< vector<Spot> >::iterator it = map.begin(); it != map.end(); ++it)
+        {
+            for (vector<Spot>::iterator st = (*it).begin(); st != (*it).end(); ++st)
+            {
+                string tmp = (*st).toString(); 
+                cout << tmp;
+            }
+
+            cout << endl;
+        }
+    }
+
+private:
+    void init(int n);
+
+    vector< vector <Spot> > map;
+};
+
+void Grid::init(int n)
+{
     int total = n*n;
 
-    t.asteroids = total/10;
-    t.gravityWells = ((total*10)/3)/10;
-    t.empty = total - t.asteroids - t.gravityWells;
+    int numAsteroids = total / 10;
+    int numGravityWells = ((total * 10) / 3) / 10;
+    int numEmpty = total - numAsteroids - numGravityWells;
 
-    return t;
-}
+    vector<SpotType> gridTypes;
 
-void drawMap(vector< vector<char> > map)
-{
-    for (vector< vector<char> >::iterator it = map.begin(); it != map.end(); ++it)
+    // Get the numbers of each type of space obstacle needed
+    for (int k = 0; k < total; k++)
     {
-        for (vector<char>::iterator st = (*it).begin(); st != (*it).end(); ++st)
+        if (k < numAsteroids)
         {
-            cout << *st;
+            gridTypes.push_back(SpotType::Asteroid);
         }
-
-        cout << endl;
+        else if (k < numGravityWells)
+        {
+            gridTypes.push_back(SpotType::GravityWell);
+        }
+        else
+        {
+            gridTypes.push_back(SpotType::Empty);
+        }
     }
-}
 
+    std::random_shuffle(gridTypes.begin(), gridTypes.end());
 
-void generateMap(int n)
-{
-    getNumbersToBeAppliedToMap(n);
+    int count = 0;
 
-    vector< vector<char> > map;
-
+    // Create the grid and populate with the randomised Spot values
+    // Empty spots (on the same row currently) previous and after a GravityWell will be updated to
+    // reflect the fact they are not navigatble
     for (int i = 0; i < n; i++)
     {
-        vector<char> tmp;
+        vector<Spot> newRow;
+
         for (int j = 0; j < n; j++)
         {
-            tmp.push_back('.');     // initializing all to empty space
+            Spot n(gridTypes[count]);
+            newRow.push_back(n);
+            count++;
         }
 
-        map.push_back(tmp);
+        map.push_back(newRow);
     }
 
-    drawMap(map);
-}
+    for (vector< vector <Spot> >::iterator it = map.begin(); it != map.end(); ++it)
+    {
+        for (vector<Spot>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+        {
+            if ((*jt).getType() == SpotType::GravityWell)
+            {
+                // mark all empty spots around as adjacent
+                auto j = jt;
 
-void runTest(int val)
-{
-    mapNumbers testVal;
-    testVal = getNumbersToBeAppliedToMap(val);
-    assert((testVal.empty + testVal.asteroids + testVal.gravityWells) == val*val);
-}
+                // previous
+                if ((--j != (*it).begin()) && ((*j).getType() == SpotType::Empty))
+                {
+                    (*j).setAsGWAdjacent();
+                }
 
-void callTests()
-{
-    runTest(5);
-    runTest(10);
-    runTest(11);
-    runTest(2);
-    cout << "Tests ok!" << endl << endl;
+                j++;
+
+                // next
+                if ((++j != (*it).end()) && ((*j).getType() == SpotType::Empty))
+                {
+                    (*j).setAsGWAdjacent();
+                }
+
+                // ::TODO:: Need to update the row previous and next to the current one
+            }
+        }
+    }
 }
 
 
 int main()
 {
-    int n = 0;
+    Grid g(50);
 
-    callTests();
-
-    /*cout << "Enter value to generate NxN 2-D space map:" << endl;
-    cin >> n;
-    cout << endl;
-
-    generateMap(n);*/
-
+    cout << endl << "--Draw Map--" << endl;
+    g.drawMap();
+    cout << endl << "--Draw Map--" << endl;
     return 0;
 }
+
+
+
+
+
