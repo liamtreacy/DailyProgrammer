@@ -107,6 +107,9 @@ public:
 
 private:
     void init(int n);
+    vector<size_t> getGravityWellPosForRow(vector<Spot> v);
+    void updateSpotsAboveGW(size_t row, vector<size_t> gravityWellElementsInNextRow);
+    void updateSpotsBesideGW(size_t row, vector<size_t> gravityWellElements);
 
     vector< vector <Spot> > map;
 };
@@ -159,33 +162,57 @@ void Grid::init(int n)
         map.push_back(newRow);
     }
 
-    for (vector< vector <Spot> >::iterator it = map.begin(); it != map.end(); ++it)
+
+    vector<size_t> findResultsThisRow;
+    vector<size_t> findResultsNextRow;
+
+    vector<size_t> indicesToBeUpdated;
+
+    for (vector< vector <Spot> >::iterator row = map.begin(); row != map.end(); ++row)
     {
-        for (vector<Spot>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+        indicesToBeUpdated.clear();
+        findResultsThisRow.clear();
+        findResultsNextRow.clear();
+
+        auto nextRow = row;
+        nextRow++;
+
+        findResultsThisRow = getGravityWellPosForRow(*row);
+
+        if (nextRow != map.end())
         {
-            if ((*jt).getType() == SpotType::GravityWell)
-            {
-                // mark all empty spots around as adjacent
-                auto j = jt;
-
-                // previous
-                if ((--j != (*it).begin()) && ((*j).getType() == SpotType::Empty))
-                {
-                    (*j).setAsGWAdjacent();
-                }
-
-                j++;
-
-                // next
-                if ((++j != (*it).end()) && ((*j).getType() == SpotType::Empty))
-                {
-                    (*j).setAsGWAdjacent();
-                }
-
-                // ::TODO:: Need to update the row previous and next to the current one
-            }
+            findResultsNextRow = getGravityWellPosForRow(*nextRow);
         }
     }
+}
+
+void Grid::updateSpotsBesideGW(size_t row, vector<size_t> gravityWellElements)
+{
+}
+
+void Grid::updateSpotsAboveGW(size_t row, vector<size_t> gravityWellElementsInNextRow)
+{
+}
+
+vector<size_t> Grid::getGravityWellPosForRow(vector<Spot> v)
+{
+    vector<size_t> results;
+
+    if (v.empty())
+    {
+        cout << "OUcH";
+        return results;
+    }
+
+    auto it = std::find_if(std::begin(v), std::end(v), [](Spot t){ return t.getType() == SpotType::GravityWell; });
+    
+    while (it != std::end(v)) 
+    {
+        results.push_back(std::distance(std::begin(v), it));
+        it = std::find_if(std::next(it), std::end(v), [](Spot t){return t.getType() == SpotType::GravityWell; });
+    }
+
+    return results;
 }
 
 
